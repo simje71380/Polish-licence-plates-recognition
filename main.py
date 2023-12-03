@@ -6,6 +6,9 @@ import numpy as np
 import cv2 
 
 
+# apres detection des plaques : transformation perspective
+#https://medium.com/analytics-vidhya/opencv-perspective-transformation-9edffefb2143
+
 
 if __name__ == "__main__":
     #step 1 : load image
@@ -14,7 +17,7 @@ if __name__ == "__main__":
     init_img = plt.imread("dataset/train/askasnk_jpg.rf.6676b538895dc0b4e960a7a5f1dcd7a0.jpg")
 
     #loading image via cv2
-    init_img = cv2.imread("dataset/train/polen17_jpg.rf.67a03dbe77abba286c79c27ea0e9982f.jpg",0) #2nd arg 0 -> grayscale
+    init_img = cv2.imread("dataset/valid/nazwy_jpg.rf.c268a5b45fcb5f346def9a6b84387791.jpg",0) #2nd arg 0 -> grayscale
     #init_img = cv2.imread('dataset/train/thumb-article-1248-tmain_jpg.rf.0ce02fef5747ab99a8146c1f6eb86829.jpg',0)
     #init_img = cv2.imread('dataset/train/t4_jpg.rf.224f07aab24f0ac28ffdd3b61ef38400.jpg',0)
     
