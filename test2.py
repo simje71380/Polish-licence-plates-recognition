@@ -32,6 +32,7 @@ if __name__ == '__main__':
             plate = extract_sobel(init_colored_img, preprocessed_img)
                     
             if len(plate) == 0:
+                pass
                 #nothing have been detected as a licence plate
                 #TODO : reprocess with another algorithm / technique keep rejected
                 preprocessed_img = preprocess2(init_grey_img, init_grey_img)
@@ -47,5 +48,5 @@ if __name__ == '__main__':
                 cv2.waitKey(0)
             else:                      
                 cv2.drawContours(init_colored_img, [plate], -1, (0, 255, 0), 3)
-                #cv2.imshow("Final image", init_colored_img)
-                #cv2.waitKey(0)
+                cv2.imshow("Final image", init_colored_img)
+                cv2.waitKey(0)
