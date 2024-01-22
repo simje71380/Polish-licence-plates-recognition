@@ -6,14 +6,14 @@ def non_max_suppression(rectangles):
     if len(rectangles) == 0:
         return []
 
-    # Initialiser la liste des rectangles sélectionnés
+    # Initialize the list of selected rectangles
     selected_rectangles = []
 
-    # Parcourir les boîtes restantes
+    # Browse remaining boxes
     for i, rect in enumerate(rectangles):
         x, y, w, h = rect
 
-        # Vérifier si le rectangle est inclus dans un rectangle
+        # Check if the rectangle is included in a rectangle
         is_inside = False
         for j in range(len(rectangles)):
             if(i == j):
@@ -21,26 +21,26 @@ def non_max_suppression(rectangles):
 
             x1, y1, w1, h1 = rectangles[j]
 
-            # Vérifier si le rectangle est complètement inclus dans un autre
+            # Check if the rectangle is completely enclosed in another one
             
             if x1 <= x and x1+w1 >= x + w:
                 is_inside = True
                 break
             
 
-        # Ajouter le rectangle à la liste des rectangles sélectionnés si ce n'est pas inclus dans un autre
+        # Add rectangle to list of selected rectangles if not included in another one
         if not is_inside:
             selected_rectangles.append(rect)
 
     return selected_rectangles
 
-# Charger l'image
+# Load image
 image = cv2.imread('plate1.png')
 if image is None:
     print("Impossible de charger l'image.")
     exit()
 
-# Convertir en niveaux de gris
+# Convert to grayscale
 gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
 
 #DETECTION VIA SOBEL WITHOUT ADAPTIVE THRESHOLD
@@ -51,17 +51,17 @@ edges = np.uint8(edges)
 
 _, edges = cv2.threshold(edges, 50, 255, cv2.THRESH_BINARY)
 
-# Érosion et dilatation
+# Erosion and expansion
 kernel = cv2.getStructuringElement(cv2.MORPH_RECT, (3, 3))
 dilated = cv2.dilate(edges, kernel, iterations=1)
 
-# Détection des contours
+# Contour detection
 contours, _ = cv2.findContours(dilated, cv2.RETR_LIST, cv2.CHAIN_APPROX_SIMPLE)
 
-# Liste pour stocker les rectangles
+# List for storing rectangles
 rectangles = []
 
-# Dessiner les contours
+# Drawing contours
 for contour in contours:
     approx = cv2.approxPolyDP(contour, 0.01* cv2.arcLength(contour, True), True)
     area = cv2.contourArea(contour)
@@ -79,16 +79,16 @@ for contour in contours:
 
 rectangles = sorted(rectangles, key=lambda x: x[2] * x[3], reverse=True)
 
-#filtrage des reactangles
+# Rectangle filtering
 selected_rectangles = non_max_suppression(rectangles)
 
 
-# Dessiner les rectangles sélectionnés sur l'image
+# Draw selected rectangles on the image
 for rect in selected_rectangles:
     x, y, w, h = rect
     cv2.rectangle(image, (x, y), (x + w, y + h), (0, 0, 255), 3)
 
-# Afficher les images
+# Show images
 plt.figure(figsize=(12, 12))
 plt.subplot(221), plt.imshow(cv2.cvtColor(gray, cv2.COLOR_BGR2RGB)), plt.title('Niveaux de Gris')
 #plt.subplot(222), plt.imshow(cv2.cvtColor(adaptive_thresh, cv2.COLOR_BGR2RGB)), plt.title('Seuil Adaptatif')
