@@ -16,12 +16,15 @@ def are_values_equal_with_tolerance(value1, value2, tolerance_percent=10):
 if __name__ == '__main__':
     directory = 'dataset/valid'
     # iterate over files in that directory
+    i = 0
     for filename in os.listdir(directory):
         f = os.path.join(directory, filename)
         # checking if it is a file
         if os.path.isfile(f):
             #load image
             init_colored_img = cv2.imread(f)
+             
+            init_colored_img = cv2.resize(init_colored_img, (640, 640), interpolation = cv2.INTER_LINEAR)
             init_grey_img = cv2.cvtColor(init_colored_img, cv2.COLOR_BGR2GRAY) #grayscale
 
 
@@ -150,7 +153,8 @@ if __name__ == '__main__':
                     axs[2, 2].set_title("extracted plate")
                     axs[2, 2].imshow(dst)
 
-                    #cv2.imwrite("plate" + ".png", dst)
+                    cv2.imwrite("plate"+ str(i) + ".png", dst)
+                    i += 1
 
 
                     #TODO: as we said we have to detect only black and white plates
@@ -314,7 +318,9 @@ if __name__ == '__main__':
                             axs[2, 2].set_title("extracted plate")
                             axs[2, 2].imshow(dst)
 
-                            #cv2.imwrite("plate" + ".png", dst)
+                            cv2.imwrite("plate"+ str(i) + ".png", dst)
+                            i += 1
+
                             cv2.drawContours(contour_img, [c], 0, (255, 0, 0), 3)
                             plate_found = True
                             break
@@ -328,3 +334,5 @@ if __name__ == '__main__':
             axs[0, 2].imshow(all_contour_image)
                             
             plt.show() #display
+
+            #save image to disk
