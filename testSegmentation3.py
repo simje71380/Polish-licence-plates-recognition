@@ -35,17 +35,29 @@ def non_max_suppression(rectangles):
     return selected_rectangles
 
 # Load image
-image = cv2.imread('plate1.png')
+image = cv2.imread('plate5.png')
+image = cv2.imread('Plaque.jpg')
 if image is None:
     print("Impossible de charger l'image.")
     exit()
 
+image = cv2.resize(image, (500, 100), interpolation = cv2.INTER_LINEAR)
+
 # Convert to grayscale
 gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
 
+#bilateral filtering
+filtered = cv2.bilateralFilter(gray, 3, 50, 50) 
+
+
+#histogram equalization
+hist_equal = cv2.equalizeHist(filtered)
+
+_, thresholded = cv2.threshold(hist_equal, 75, 255, cv2.THRESH_BINARY)
+
 #DETECTION VIA SOBEL WITHOUT ADAPTIVE THRESHOLD
-grad_x = cv2.Sobel(gray, cv2.CV_64F, 1, 0, ksize=3)
-grad_y = cv2.Sobel(gray, cv2.CV_64F, 0, 1, ksize=3)
+grad_x = cv2.Sobel(thresholded, cv2.CV_64F, 1, 0, ksize=1)
+grad_y = cv2.Sobel(thresholded, cv2.CV_64F, 0, 1, ksize=1)
 edges = cv2.magnitude(grad_x, grad_y)
 edges = np.uint8(edges)
 
@@ -90,9 +102,13 @@ for rect in selected_rectangles:
 
 # Show images
 plt.figure(figsize=(12, 12))
-plt.subplot(221), plt.imshow(cv2.cvtColor(gray, cv2.COLOR_BGR2RGB)), plt.title('Niveaux de Gris')
+plt.subplot(331), plt.imshow(cv2.cvtColor(gray, cv2.COLOR_BGR2RGB)), plt.title('Niveaux de Gris')
 #plt.subplot(222), plt.imshow(cv2.cvtColor(adaptive_thresh, cv2.COLOR_BGR2RGB)), plt.title('Seuil Adaptatif')
-plt.subplot(222), plt.imshow(cv2.cvtColor(edges, cv2.COLOR_BGR2RGB)), plt.title('Sobel Edge Detection')
-plt.subplot(223), plt.imshow(cv2.cvtColor(dilated, cv2.COLOR_BGR2RGB)), plt.title('dilated')
-plt.subplot(224), plt.imshow(cv2.cvtColor(image, cv2.COLOR_BGR2RGB)), plt.title('Résultat Final')
+
+plt.subplot(332), plt.imshow(cv2.cvtColor(filtered, cv2.COLOR_BGR2RGB)), plt.title('bilateral filtering')
+plt.subplot(333), plt.imshow(cv2.cvtColor(hist_equal, cv2.COLOR_BGR2RGB)), plt.title('histogram equalization')
+plt.subplot(334), plt.imshow(cv2.cvtColor(thresholded, cv2.COLOR_BGR2RGB)), plt.title('thresholding')
+plt.subplot(335), plt.imshow(cv2.cvtColor(edges, cv2.COLOR_BGR2RGB)), plt.title('Sobel Edge Detection')
+plt.subplot(336), plt.imshow(cv2.cvtColor(dilated, cv2.COLOR_BGR2RGB)), plt.title('dilated')
+plt.subplot(337), plt.imshow(cv2.cvtColor(image, cv2.COLOR_BGR2RGB)), plt.title('Résultat Final')
 plt.show()

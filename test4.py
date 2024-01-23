@@ -38,7 +38,7 @@ if __name__ == '__main__':
             axs[1, 0].imshow(init_grey_img, cmap='gray')
 
             #bilateral filtering
-            filtered = cv2.bilateralFilter(init_grey_img, 15, 100, 50) 
+            filtered = cv2.bilateralFilter(init_grey_img, 15, 75, 75) 
             axs[2, 0].set_title("bilateral filtering")
             axs[2, 0].imshow(filtered, cmap='gray')
 
@@ -97,7 +97,7 @@ if __name__ == '__main__':
 
             #Morphological opening
             kernel = cv2.getStructuringElement(cv2.MORPH_RECT,(5, 5))    
-            opening = cv2.morphologyEx(cpy, cv2.MORPH_OPEN, kernel, iterations = 6)
+            opening = cv2.morphologyEx(cpy, cv2.MORPH_OPEN, kernel, iterations = 5)
 
             axs[2, 2].set_title("filled opened")
             axs[2, 2].imshow(opening.copy(), cmap='gray')
@@ -112,7 +112,7 @@ if __name__ == '__main__':
 
             all_contour_image = init_colored_img.copy()
 
-            candidate = []
+            candidates = []
 
             for c in cnts:
                 rect = cv2.minAreaRect(c) 
@@ -129,12 +129,24 @@ if __name__ == '__main__':
                 print("area :" + str(area))
                 print("area/perimeter : " + str(area/perimeter))
                 img = cv2.drawContours(all_contour_image, [box], 0, (0, 255, 0), 2)
-                candidate.append(box)
+                candidates.append(box)
             
             axs[3, 2].set_title("detected candidates")
             axs[3, 2].imshow(all_contour_image)
 
-            #TODO : classification of candidate via texture analysis ?
+            if len(candidates) == 0:
+                print("REJECTED : no plate found")
+                continue
+            else:
+                #TODO : classification of candidate via texture analysis ?
+                pass
+
+            #display of the detected plate
+            axs[0, 3].set_title("detected plate")
+            #axs[0, 3].imshow(plate)
+
+            
+
                             
             plt.show() #display
 
