@@ -63,7 +63,7 @@ def Segmentation(image):
 
     _, edges = cv2.threshold(edges, 50, 255, cv2.THRESH_BINARY)
 
-    # Erosion and expansion
+    # dilatation
     kernel = cv2.getStructuringElement(cv2.MORPH_RECT, (3, 3))
     dilated = cv2.dilate(edges, kernel, iterations=1)
 
