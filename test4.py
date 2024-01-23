@@ -5,6 +5,9 @@ from extract import extract, extract_sobel, extract_canny
 import matplotlib.pyplot as plt
 import os
 
+from skimage.feature import local_binary_pattern
+from sklearn.cluster import KMeans
+
 #file:///C:/Users/simon/Downloads/ijcsit2014050362-1.pdf
 
 
@@ -138,7 +141,61 @@ if __name__ == '__main__':
                 print("REJECTED : no plate found")
                 continue
             else:
-                #TODO : classification of candidate via texture analysis ?
+                # Classification of candidate via texture analysis
+                def extract_texture_features(region):
+                    # We use LBP to extract additional texture characteristics
+                    lbp = local_binary_pattern(region, 24, 8, method="uniform")
+                    lbp_hist, _ = np.histogram(lbp.ravel(), bins=np.arange(0, 27), range=(0, 26))
+
+                    # Histogram normalization
+                    lbp_hist = lbp_hist.astype("float")
+                    lbp_hist /= (lbp_hist.sum() + 1e-6)
+
+                    # Calculating statistics from the GLCM
+                    glcm = cv2.createCLAHE().apply(region)
+                    contrast = np.std(glcm)
+                    homogeneity = np.mean(glcm)
+                    energy = np.sum(glcm ** 2)
+
+                    # Return a combined feature vector
+                    return np.concatenate(([contrast, homogeneity, energy], lbp_hist))
+
+                
+                # Creation of an array to rank each candidate
+                texture_features = []
+
+                for box in candidates:
+                    # Extract region from box
+                    mask = np.zeros_like(init_grey_img)
+                    cv2.drawContours(mask, [box], 0, 255, -1)
+                    masked_img = cv2.bitwise_and(init_grey_img, init_grey_img, mask=mask)
+                    region = masked_img[np.min(box[:, 1]):np.max(box[:, 1]), np.min(box[:, 0]):np.max(box[:, 0])]
+                    
+                    # Extract texture characteristics
+                    features = extract_texture_features(region)
+                    texture_features.append(features)
+
+                kmeans = KMeans(n_clusters=2)
+                labels = kmeans.fit_predict(texture_features)
+
+                # The cluster with the highest average contrast is chosen for the plates.
+                cluster_contrast = [np.mean([features[0] for features, label in zip(texture_features, labels) if label == i]) for i in range(2)]
+                plate_cluster_label = np.argmax(cluster_contrast)
+
+                # Filter candidates based on selected cluster
+                plate_candidates = [box for box, label in zip(candidates, labels) if label == plate_cluster_label]
+
+
+                # Draw and display plate candidates
+                plate_candidates_img = init_colored_img.copy()  # Create a copy of the original image
+
+                for box in plate_candidates:
+                    cv2.drawContours(plate_candidates_img, [box], 0, (0, 255, 0), 2)  # Draw each candidate
+
+                axs[0, 3].set_title("Detected Plate Candidates")
+                axs[0, 3].imshow(cv2.cvtColor(plate_candidates_img, cv2.COLOR_BGR2RGB))  # Convert BGR to RGB for displaying
+
+                plt.show()  # Show result
                 pass
 
             #display of the detected plate
