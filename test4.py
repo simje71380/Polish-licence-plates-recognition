@@ -10,6 +10,59 @@ from sklearn.cluster import KMeans
 
 #file:///C:/Users/simon/Downloads/ijcsit2014050362-1.pdf
 
+def extract_texture_features(region):
+    # We use LBP to extract additional texture characteristics
+    lbp = local_binary_pattern(region, 24, 8, method="uniform")
+    lbp_hist, _ = np.histogram(lbp.ravel(), bins=np.arange(0, 27), range=(0, 26))
+
+    # Histogram normalization
+    lbp_hist = lbp_hist.astype("float")
+    lbp_hist /= (lbp_hist.sum() + 1e-6)
+
+    # Calculating statistics from the GLCM
+    glcm = cv2.createCLAHE().apply(region)
+    contrast = np.std(glcm)
+    homogeneity = np.mean(glcm)
+    energy = np.sum(glcm ** 2)
+
+    # Return a combined feature vector
+    return np.concatenate(([contrast, homogeneity, energy], lbp_hist))
+
+def get_plate_img(points, colored_img):
+    sortcorners = []
+    for corner in points[0]:
+        pt = [corner[0], corner[1]]
+        sortcorners.append(pt)
+
+    # Sort corners based on y-coordinate
+    sortcorners.sort(key=lambda elem: elem[1])
+
+    output = sortcorners.copy()
+    if(sortcorners[0][0] < sortcorners[1][0]):
+        output[3] = sortcorners[1]
+        output[0] = sortcorners[0]
+    else:
+        output[3] = sortcorners[0]
+        output[0] = sortcorners[1]
+
+    if(sortcorners[2][0] < sortcorners[3][0]):
+        output[1] = sortcorners[2]
+        output[2] = sortcorners[3]
+    else:
+        output[1] = sortcorners[3]
+        output[2] = sortcorners[2]
+
+    icorners = np.float32(output)
+
+    # Get corresponding output corners from width and height
+    wd, ht = 500, 300
+    ocorners = np.float32([[0, 0], [0, ht], [wd, ht], [wd, 0]])
+
+    # Get perspective transformation matrix
+    M = cv2.getPerspectiveTransform(icorners, ocorners)
+
+    return cv2.warpPerspective(colored_img,M,(wd,ht))
+
 
 if __name__ == '__main__':
     directory = 'dataset/new'
@@ -123,14 +176,15 @@ if __name__ == '__main__':
                 box = np.int0(box)
                 perimeter = cv2.arcLength(box, True)
                 area = cv2.contourArea(box)
+
                 if(perimeter < 250 or area < 2000): #allows us to reject remaining small contours
                     continue
+                print(area, perimeter)
 
-                #or perimeter/area < 0.07
+                if( area > 13000):
+                    img = cv2.drawContours(all_contour_image, [box], 0, (255, 255, 0), 2)
+                    continue
 
-                print("perimeter :" + str(perimeter))
-                print("area :" + str(area))
-                print("area/perimeter : " + str(area/perimeter))
                 img = cv2.drawContours(all_contour_image, [box], 0, (0, 255, 0), 2)
                 candidates.append(box)
             
@@ -140,26 +194,13 @@ if __name__ == '__main__':
             if len(candidates) == 0:
                 print("REJECTED : no plate found")
                 continue
+            elif len(candidates) == 1:
+                plate = get_plate_img(candidates, init_colored_img)
+                print(candidates)
+                axs[0, 3].set_title("detected plate")
+                axs[0, 3].imshow(plate)
             else:
                 # Classification of candidate via texture analysis
-                def extract_texture_features(region):
-                    # We use LBP to extract additional texture characteristics
-                    lbp = local_binary_pattern(region, 24, 8, method="uniform")
-                    lbp_hist, _ = np.histogram(lbp.ravel(), bins=np.arange(0, 27), range=(0, 26))
-
-                    # Histogram normalization
-                    lbp_hist = lbp_hist.astype("float")
-                    lbp_hist /= (lbp_hist.sum() + 1e-6)
-
-                    # Calculating statistics from the GLCM
-                    glcm = cv2.createCLAHE().apply(region)
-                    contrast = np.std(glcm)
-                    homogeneity = np.mean(glcm)
-                    energy = np.sum(glcm ** 2)
-
-                    # Return a combined feature vector
-                    return np.concatenate(([contrast, homogeneity, energy], lbp_hist))
-
                 
                 # Creation of an array to rank each candidate
                 texture_features = []
@@ -192,19 +233,15 @@ if __name__ == '__main__':
                 for box in plate_candidates:
                     cv2.drawContours(plate_candidates_img, [box], 0, (0, 255, 0), 2)  # Draw each candidate
 
+
                 axs[0, 3].set_title("Detected Plate Candidates")
                 axs[0, 3].imshow(cv2.cvtColor(plate_candidates_img, cv2.COLOR_BGR2RGB))  # Convert BGR to RGB for displaying
 
-                plt.show()  # Show result
-                pass
 
-            #display of the detected plate
-            axs[0, 3].set_title("detected plate")
-            #axs[0, 3].imshow(plate)
-
-            
-
+                formatted_list = [np.array(plate_candidates[0])]
+                print(formatted_list)
+                plate = get_plate_img(formatted_list, init_colored_img)
+                axs[1, 3].set_title("Detected Plate")
+                axs[1, 3].imshow(plate)  # Convert BGR to RGB for displaying
                             
             plt.show() #display
-
-            #save image to disk

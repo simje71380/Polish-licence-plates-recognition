@@ -2,6 +2,63 @@ import cv2
 import numpy as np
 import matplotlib.pyplot as plt
 import os
+from skimage.feature import local_binary_pattern
+from sklearn.cluster import KMeans
+
+
+
+def extract_texture_features(region):
+    # We use LBP to extract additional texture characteristics
+    lbp = local_binary_pattern(region, 24, 8, method="uniform")
+    lbp_hist, _ = np.histogram(lbp.ravel(), bins=np.arange(0, 27), range=(0, 26))
+
+    # Histogram normalization
+    lbp_hist = lbp_hist.astype("float")
+    lbp_hist /= (lbp_hist.sum() + 1e-6)
+
+    # Calculating statistics from the GLCM
+    glcm = cv2.createCLAHE().apply(region)
+    contrast = np.std(glcm)
+    homogeneity = np.mean(glcm)
+    energy = np.sum(glcm ** 2)
+
+    # Return a combined feature vector
+    return np.concatenate(([contrast, homogeneity, energy], lbp_hist))
+
+def get_plate_img(points, colored_img):
+    sortcorners = []
+    for corner in points[0]:
+        pt = [corner[0], corner[1]]
+        sortcorners.append(pt)
+
+    # Sort corners based on y-coordinate
+    sortcorners.sort(key=lambda elem: elem[1])
+
+    output = sortcorners.copy()
+    if(sortcorners[0][0] < sortcorners[1][0]):
+        output[3] = sortcorners[1]
+        output[0] = sortcorners[0]
+    else:
+        output[3] = sortcorners[0]
+        output[0] = sortcorners[1]
+
+    if(sortcorners[2][0] < sortcorners[3][0]):
+        output[1] = sortcorners[2]
+        output[2] = sortcorners[3]
+    else:
+        output[1] = sortcorners[3]
+        output[2] = sortcorners[2]
+
+    icorners = np.float32(output)
+
+    # Get corresponding output corners from width and height
+    wd, ht = 500, 300
+    ocorners = np.float32([[0, 0], [0, ht], [wd, ht], [wd, 0]])
+
+    # Get perspective transformation matrix
+    M = cv2.getPerspectiveTransform(icorners, ocorners)
+
+    return cv2.warpPerspective(colored_img,M,(wd,ht))
 
 def extract_plate(img):
     #load image
@@ -120,20 +177,84 @@ def extract_plate(img):
     axs[3, 2].set_title("detected candidates")
     axs[3, 2].imshow(all_contour_image)
 
+    plate = []
+
     if len(candidates) == 0:
         print("REJECTED : no plate found")
-        return []
+    elif len(candidates) == 1:
+        plate.append(get_plate_img(candidates, init_colored_img))
+        axs[0, 3].set_title("detected plate")
+        axs[0, 3].imshow(plate)
     else:
-        #TODO : classification of candidate via texture analysis ?
-        pass
+        # Classification of candidate via texture analysis
+        
+        # Creation of an array to rank each candidate
 
-    #display of the detected plate
-    axs[0, 3].set_title("detected plate")
-    #axs[0, 3].imshow(plate)
+        '''
+        texture_features = []
 
-    
+        for box in candidates:
+            # Extract region from box
+            mask = np.zeros_like(init_grey_img)
+            cv2.drawContours(mask, [box], 0, 255, -1)
+            masked_img = cv2.bitwise_and(init_grey_img, init_grey_img, mask=mask)
+            region = masked_img[np.min(box[:, 1]):np.max(box[:, 1]), np.min(box[:, 0]):np.max(box[:, 0])]
+            
+            # Extract texture characteristics
+            features = extract_texture_features(region)
+            texture_features.append(features)
 
-                    
+        kmeans = KMeans(n_clusters=2)
+        labels = kmeans.fit_predict(texture_features)
+
+        # The cluster with the highest average contrast is chosen for the plates.
+        cluster_contrast = [np.mean([features[0] for features, label in zip(texture_features, labels) if label == i]) for i in range(2)]
+        plate_cluster_label = np.argmax(cluster_contrast)
+
+        # Filter candidates based on selected cluster
+        plate_candidates = [box for box, label in zip(candidates, labels) if label == plate_cluster_label]
+
+
+        # Draw and display plate candidates
+        plate_candidates_img = init_colored_img.copy()  # Create a copy of the original image
+
+        for box in plate_candidates:
+            cv2.drawContours(plate_candidates_img, [box], 0, (0, 255, 0), 2)  # Draw each candidate
+            formatted_list = [np.array(box)]
+            plate.append(get_plate_img(formatted_list, init_colored_img))
+
+
+
+        axs[0, 3].set_title("Detected Plate Candidates")
+        axs[0, 3].imshow(cv2.cvtColor(plate_candidates_img, cv2.COLOR_BGR2RGB))  # Convert BGR to RGB for displaying
+
+
+        for index, p in enumerate(plate):
+            axs[1 + index, 3].set_title("Detected Plate")
+            axs[1 + index, 3].imshow(p)
+        '''
+
+        #check all candidates segmentation will reject false positives
+        plate_candidates_img = init_colored_img.copy() 
+        for box in candidates:
+            cv2.drawContours(plate_candidates_img, [box], 0, (0, 255, 0), 2)  # Draw each candidate
+            formatted_list = [np.array(box)]
+            plate.append(get_plate_img(formatted_list, init_colored_img))
+
+
+
+        axs[0, 3].set_title("Detected Plate Candidates")
+        axs[0, 3].imshow(cv2.cvtColor(plate_candidates_img, cv2.COLOR_BGR2RGB))  # Convert BGR to RGB for displaying
+
+
+        for index, p in enumerate(plate):
+            if(index > 2):
+                break
+            axs[1 + index, 3].set_title("Detected Plate")
+            axs[1 + index, 3].imshow(p)
+
     plt.show() #display
+
+    return plate
 
     #save image to disk
