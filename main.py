@@ -5,7 +5,7 @@ import cv2, os
 
 
 if __name__ == "__main__":
-    directory = 'dataset/new'
+    directory = 'dataset/samples'
     # iterate over files in that directory
     for filename in os.listdir(directory):
         f = os.path.join(directory, filename)
